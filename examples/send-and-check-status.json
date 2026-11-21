@@ -1,0 +1,173 @@
+{
+  "name": "SMTPfast: send to the SES simulator and check status",
+  "nodes": [
+    {
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "name": "Recipients",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        200,
+        0
+      ],
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\"to\": [\"success@simulator.amazonses.com\", \"bounce@simulator.amazonses.com\"]}",
+        "options": {}
+      }
+    },
+    {
+      "name": "One Item Per Recipient",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        400,
+        0
+      ],
+      "parameters": {
+        "fieldToSplitOut": "to",
+        "options": {}
+      }
+    },
+    {
+      "name": "Send Email",
+      "type": "n8n-nodes-smtpfast.smtpfast",
+      "typeVersion": 1,
+      "position": [
+        600,
+        0
+      ],
+      "credentials": {
+        "smtpfastApi": {
+          "id": "",
+          "name": "SMTPfast account"
+        }
+      },
+      "parameters": {
+        "resource": "email",
+        "operation": "send",
+        "from": "Acme <hello@yourdomain.com>",
+        "to": "={{ $json.to }}",
+        "subject": "Test from n8n",
+        "emailFormat": "both",
+        "html": "<p>Hello from n8n.</p>",
+        "text": "Hello from n8n.",
+        "category": "transactional",
+        "additionalFields": {
+          "tags": {
+            "tag": [
+              {
+                "name": "source",
+                "value": "n8n"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        0
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 30,
+        "unit": "seconds"
+      }
+    },
+    {
+      "name": "Get Email",
+      "type": "n8n-nodes-smtpfast.smtpfast",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        0
+      ],
+      "credentials": {
+        "smtpfastApi": {
+          "id": "",
+          "name": "SMTPfast account"
+        }
+      },
+      "parameters": {
+        "resource": "email",
+        "operation": "get",
+        "emailId": "={{ $('Send Email').item.json.id }}",
+        "simplify": true
+      }
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Recipients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recipients": {
+      "main": [
+        [
+          {
+            "node": "One Item Per Recipient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One Item Per Recipient": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

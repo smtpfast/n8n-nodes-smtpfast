@@ -1,0 +1,61 @@
+{
+  "name": "n8n-nodes-smtpfast",
+  "version": "0.1.0",
+  "description": "n8n community node for SMTPfast: send email, manage contacts and domains, and start workflows from SMTPfast webhook events.",
+  "license": "MIT",
+  "homepage": "https://github.com/smtpfast/n8n-nodes-smtpfast#readme",
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "smtpfast",
+    "email",
+    "transactional-email",
+    "webhooks"
+  ],
+  "author": {
+    "name": "SMTPfast",
+    "email": "info@smtpfa.st"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smtpfast/n8n-nodes-smtpfast.git"
+  },
+  "bugs": {
+    "url": "https://github.com/smtpfast/n8n-nodes-smtpfast/issues"
+  },
+  "scripts": {
+    "build": "n8n-node build",
+    "build:watch": "tsc --watch",
+    "dev": "n8n-node dev",
+    "lint": "n8n-node lint",
+    "lint:fix": "n8n-node lint --fix",
+    "test": "n8n-node build && node --test \"test/**/*.test.js\"",
+    "release": "n8n-node release",
+    "prepublishOnly": "n8n-node prerelease"
+  },
+  "files": [
+    "dist",
+    "!dist/tsconfig.tsbuildinfo"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "strict": true,
+    "credentials": [
+      "dist/credentials/SmtpfastApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/Smtpfast/Smtpfast.node.js",
+      "dist/nodes/SmtpfastTrigger/SmtpfastTrigger.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@n8n/node-cli": "*",
+    "eslint": "9.32.0",
+    "prettier": "3.6.2",
+    "release-it": "^21.1.0",
+    "typescript": "5.9.2"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}
