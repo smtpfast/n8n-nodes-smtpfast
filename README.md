@@ -72,7 +72,7 @@ n8n tests the credential with `GET /v1/me`, which needs no scope.
 - **Delete**: delete a contact permanently. The output is `{ "deleted": true }`.
 - **Add to Segment** and **Remove From Segment**: change the manual segments of a contact. Removing a contact from a segment does not delete the contact.
 
-Wherever the node asks for a contact, you can give the contact ID or the email address. Custom properties must exist in SMTPfast before you set them.
+Wherever the node asks for a contact, you can give the contact ID or the email address. Custom properties must exist in SMTPfast before you set them. Each property value has a type (Text, Number, Boolean or Empty for null). Pick the type the property has in SMTPfast.
 
 ### Domain
 

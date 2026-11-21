@@ -87,6 +87,7 @@ function createTriggerContext({
 	staticData = {},
 	webhookUrl = 'https://n8n.example.com/webhook/abc/webhook',
 	request = {},
+	mode = 'trigger',
 }) {
 	const http = createHttp(replies);
 	const response = { statusCode: 200, body: undefined };
@@ -100,6 +101,7 @@ function createTriggerContext({
 			return name in params ? params[name] : fallback;
 		},
 		getNodeWebhookUrl: () => webhookUrl,
+		getMode: () => mode,
 		getWorkflowStaticData: () => staticData,
 		getRequestObject: () => request,
 		getHeaderData: () => request.headers ?? {},

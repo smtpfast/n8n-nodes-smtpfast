@@ -319,6 +319,59 @@ describe('Contact', () => {
 		});
 	});
 
+	it('sends property values with the chosen type', async () => {
+		const { calls, result } = run({
+			params: [
+				{
+					resource: 'contact',
+					operation: 'update',
+					contactId: 'c_1',
+					updateFields: {
+						properties: {
+							property: [
+								{ key: 'plan', type: 'string', value: '42' },
+								{ key: 'seats', type: 'number', value: ' 42 ' },
+								{ key: 'beta', type: 'boolean', value: 'TRUE' },
+								{ key: 'trial_end', type: 'null' },
+								{ key: 'score', value: 7 },
+							],
+						},
+					},
+				},
+			],
+			replies: [{ object: 'contact', id: 'c_1' }],
+		});
+		await result;
+		assert.deepEqual(calls[0].options.body.properties, {
+			plan: '42',
+			seats: 42,
+			beta: true,
+			trial_end: null,
+			score: 7,
+		});
+	});
+
+	it('refuses a number property that is not a number', async () => {
+		const { calls, result } = run({
+			params: [
+				{
+					resource: 'contact',
+					operation: 'update',
+					contactId: 'c_1',
+					updateFields: {
+						properties: { property: [{ key: 'seats', type: 'number', value: 'many' }] },
+					},
+				},
+			],
+		});
+		await assert.rejects(result, (error) => {
+			assert.ok(error instanceof NodeOperationError);
+			assert.match(error.message, /not a number/);
+			return true;
+		});
+		assert.equal(calls.length, 0);
+	});
+
 	it('upserts through the bulk form and returns the one contact', async () => {
 		const contact = { id: 'c_1', email: 'nathan@x.dev', first_name: 'Nathan' };
 		const { calls, result } = run({

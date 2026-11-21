@@ -105,22 +105,25 @@ export function isValidSignature(
 	signature: unknown,
 	secret: string,
 ): boolean {
-	if (typeof signature !== 'string' || signature === '' || !secret) return false;
-	const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
-	const given = signature.trim().toLowerCase();
-	if (given.length !== expected.length) return false;
-	return timingSafeEqual(Buffer.from(given), Buffer.from(expected));
+	if (typeof signature !== 'string' || !secret) return false;
+	const given = signature.trim();
+	if (!/^[0-9a-f]{64}$/i.test(given)) return false;
+	const expected = createHmac('sha256', secret).update(rawBody).digest();
+	return timingSafeEqual(Buffer.from(given, 'hex'), expected);
 }
 
 interface StoredWebhook extends IDataObject {
 	id: string;
 	secret: string;
+	/** Registered for the editor's test URL rather than the production URL. */
+	test: boolean;
 }
 
 /**
  * Webhooks this node registered, keyed by n8n webhook URL. The test URL and the
  * production URL each get their own SMTPfast webhook and signing secret, so testing
- * the workflow in the editor does not touch the production webhook.
+ * the workflow in the editor does not touch the production webhook, and a request is
+ * only checked against the secret of its own kind.
  */
 interface WebhookStaticData extends IDataObject {
 	webhooks?: Record<string, StoredWebhook>;
@@ -129,6 +132,11 @@ interface WebhookStaticData extends IDataObject {
 function storedWebhooks(staticData: WebhookStaticData): Record<string, StoredWebhook> {
 	if (!staticData.webhooks || typeof staticData.webhooks !== 'object') staticData.webhooks = {};
 	return staticData.webhooks;
+}
+
+/** n8n runs test webhooks, and their hooks, in manual mode. */
+function isTestMode(context: IHookFunctions | IWebhookFunctions): boolean {
+	return context.getMode() === 'manual';
 }
 
 function isNotFound(error: unknown): boolean {
@@ -194,6 +202,20 @@ export class SmtpfastTrigger implements INodeType {
 			async checkExists(this: IHookFunctions): Promise<boolean> {
 				const webhookUrl = this.getNodeWebhookUrl('default') as string;
 				const webhooks = storedWebhooks(this.getWorkflowStaticData('node') as WebhookStaticData);
+				const test = isTestMode(this);
+
+				// A webhook of the same kind on another URL is left over from an old n8n URL. Remove it,
+				// so SMTPfast stops sending there and its secret is no longer trusted.
+				for (const [url, old] of Object.entries(webhooks)) {
+					if (url === webhookUrl || Boolean(old.test) !== test) continue;
+					try {
+						await smtpfastApiRequest.call(this, 'DELETE', `/webhooks/${pathSegment(old.id)}`);
+					} catch (error) {
+						if (!isNotFound(error)) throw new NodeApiError(this.getNode(), error as JsonObject);
+					}
+					delete webhooks[url];
+				}
+
 				const stored = webhooks[webhookUrl];
 				if (!stored?.id || !stored.secret) return false;
 
@@ -259,7 +281,11 @@ export class SmtpfastTrigger implements INodeType {
 				}
 
 				const webhooks = storedWebhooks(this.getWorkflowStaticData('node') as WebhookStaticData);
-				webhooks[webhookUrl] = { id: String(response.id), secret: String(response.secret) };
+				webhooks[webhookUrl] = {
+					id: String(response.id),
+					secret: String(response.secret),
+					test: isTestMode(this),
+				};
 				return true;
 			},
 
@@ -284,7 +310,10 @@ export class SmtpfastTrigger implements INodeType {
 		const req = this.getRequestObject();
 		const res = this.getResponseObject();
 		const webhooks = storedWebhooks(this.getWorkflowStaticData('node') as WebhookStaticData);
-		const secrets = Object.values(webhooks).map((webhook) => String(webhook.secret ?? ''));
+		const test = isTestMode(this);
+		const secrets = Object.values(webhooks)
+			.filter((webhook) => Boolean(webhook.test) === test)
+			.map((webhook) => String(webhook.secret ?? ''));
 		const rawBody = (req as unknown as { rawBody?: Buffer | string }).rawBody;
 		const signature = this.getHeaderData()[SIGNATURE_HEADER];
 

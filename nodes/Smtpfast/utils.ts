@@ -109,15 +109,41 @@ export function parseBinaryPropertyNames(value: unknown): string[] {
 		.filter((name) => name !== '');
 }
 
+function toPropertyValue(
+	name: string,
+	type: unknown,
+	value: unknown,
+): IDataObject[keyof IDataObject] {
+	if (type === 'null') return null;
+	if (type === 'number') {
+		const number = typeof value === 'number' ? value : Number(String(value ?? '').trim());
+		if (String(value ?? '').trim() === '' || !Number.isFinite(number)) {
+			throw new Error(`The value of property '${name}' is not a number`);
+		}
+		return number;
+	}
+	if (type === 'boolean') {
+		if (typeof value === 'boolean') return value;
+		const text = String(value ?? '')
+			.trim()
+			.toLowerCase();
+		if (text === 'true') return true;
+		if (text === 'false') return false;
+		throw new Error(`The value of property '${name}' is not true or false`);
+	}
+	// Text, or a value an expression already typed.
+	return value === undefined ? '' : (value as IDataObject[keyof IDataObject]);
+}
+
 /** Turn the Properties fixed collection into the API's properties object. */
 export function propertiesToObject(collection: unknown): IDataObject | undefined {
 	if (!collection || typeof collection !== 'object') return undefined;
 	const entries = (collection as IDataObject).property;
 	if (!Array.isArray(entries) || entries.length === 0) return undefined;
 	const result: IDataObject = {};
-	for (const entry of entries as Array<{ key?: string; value?: unknown }>) {
+	for (const entry of entries as Array<{ key?: string; type?: string; value?: unknown }>) {
 		if (!entry.key) continue;
-		result[entry.key] = entry.value as IDataObject[keyof IDataObject];
+		result[entry.key] = toPropertyValue(entry.key, entry.type ?? 'string', entry.value);
 	}
 	return Object.keys(result).length ? result : undefined;
 }

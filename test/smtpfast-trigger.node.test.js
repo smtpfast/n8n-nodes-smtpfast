@@ -18,7 +18,9 @@ const trigger = new SmtpfastTrigger();
 const hooks = trigger.webhookMethods.default;
 
 const sign = (body, secret) => createHmac('sha256', secret).update(body).digest('hex');
-const stored = (id = 'wh_1', secret = 's', url = URL) => ({ webhooks: { [url]: { id, secret } } });
+const stored = (id = 'wh_1', secret = 's', url = URL, test = false) => ({
+	webhooks: { [url]: { id, secret, test } },
+});
 
 describe('trigger lifecycle', () => {
 	it('create registers a standard webhook and keeps its ID and secret', async () => {
@@ -78,6 +80,7 @@ describe('trigger lifecycle', () => {
 			params: { events: EVENTS },
 			staticData: stored('wh_prod', 's', 'https://n8n.example.com/webhook/prod/webhook'),
 			webhookUrl: 'https://n8n.example.com/webhook-test/abc/webhook',
+			mode: 'manual',
 		});
 		assert.equal(await hooks.checkExists.call(context), false);
 		assert.equal(calls.length, 0);
@@ -119,6 +122,31 @@ describe('trigger lifecycle', () => {
 		await assert.rejects(hooks.checkExists.call(context));
 	});
 
+	it('checkExists removes a production webhook left on an old n8n URL', async () => {
+		const oldUrl = 'https://old-host.example.com/webhook/abc/webhook';
+		const { context, calls, staticData } = createTriggerContext({
+			params: { events: EVENTS },
+			staticData: stored('wh_old', 'o', oldUrl),
+		});
+		assert.equal(await hooks.checkExists.call(context), false);
+		assert.equal(calls.length, 1);
+		assert.equal(calls[0].options.method, 'DELETE');
+		assert.equal(calls[0].options.url, `${API}/webhooks/wh_old`);
+		assert.deepEqual(staticData, { webhooks: {} });
+	});
+
+	it('create in the editor marks the webhook as a test webhook', async () => {
+		const testUrl = 'https://n8n.example.com/webhook-test/abc/webhook';
+		const { context, staticData } = createTriggerContext({
+			params: { events: EVENTS },
+			webhookUrl: testUrl,
+			mode: 'manual',
+			replies: [{ id: 'wh_t', secret: 't' }],
+		});
+		assert.equal(await hooks.create.call(context), true);
+		assert.deepEqual(staticData, stored('wh_t', 't', testUrl, true));
+	});
+
 	it('delete removes the webhook and the stored secret', async () => {
 		const { context, calls, staticData } = createTriggerContext({
 			staticData: stored(),
@@ -133,13 +161,18 @@ describe('trigger lifecycle', () => {
 	it('delete leaves the webhook of the other URL alone', async () => {
 		const prodUrl = 'https://n8n.example.com/webhook/prod/webhook';
 		const staticData = {
-			webhooks: { [prodUrl]: { id: 'wh_prod', secret: 'p' }, [URL]: { id: 'wh_1', secret: 's' } },
+			webhooks: {
+				[prodUrl]: { id: 'wh_prod', secret: 'p', test: false },
+				[URL]: { id: 'wh_1', secret: 's', test: false },
+			},
 		};
 		const { context, calls } = createTriggerContext({ staticData, replies: [{ success: true }] });
 		assert.equal(await hooks.delete.call(context), true);
 		assert.equal(calls.length, 1);
 		assert.equal(calls[0].options.url, `${API}/webhooks/wh_1`);
-		assert.deepEqual(staticData, { webhooks: { [prodUrl]: { id: 'wh_prod', secret: 'p' } } });
+		assert.deepEqual(staticData, {
+			webhooks: { [prodUrl]: { id: 'wh_prod', secret: 'p', test: false } },
+		});
 	});
 
 	it('delete treats a webhook that is already gone as deleted', async () => {
@@ -201,6 +234,8 @@ describe('webhook signature', () => {
 		assert.equal(isValidSignature(raw, 'abc', secret), false);
 		assert.equal(isValidSignature(raw, undefined, secret), false);
 		assert.equal(isValidSignature(raw, sign(raw, ''), ''), false);
+		assert.equal(isValidSignature(raw, 'é'.repeat(64), secret), false);
+		assert.equal(isValidSignature(raw, 'z'.repeat(64), secret), false);
 	});
 
 	const request = (body, signature) => ({
@@ -248,19 +283,35 @@ describe('webhook signature', () => {
 		assert.equal(noRaw.response.statusCode, 401);
 	});
 
-	it('accepts a signature from either the test or the production secret', async () => {
+	it('checks a request only against the secret of its own kind', async () => {
 		const staticData = {
 			webhooks: {
-				'https://n8n.example.com/webhook/prod/webhook': { id: 'wh_prod', secret: 'prod' },
-				[URL]: { id: 'wh_1', secret },
+				'https://n8n.example.com/webhook-test/abc/webhook': {
+					id: 'wh_t',
+					secret: 'test',
+					test: true,
+				},
+				[URL]: { id: 'wh_1', secret, test: false },
 			},
 		};
-		const { context } = createTriggerContext({
+		const signedWithTest = createTriggerContext({
 			params: { events: EVENTS },
 			staticData,
-			request: request(raw, sign(raw, 'prod')),
+			mode: 'webhook',
+			request: request(raw, sign(raw, 'test')),
 		});
-		const result = await trigger.webhook.call(context);
+		assert.deepEqual(await trigger.webhook.call(signedWithTest.context), {
+			noWebhookResponse: true,
+		});
+		assert.equal(signedWithTest.response.statusCode, 401);
+
+		const testRequest = createTriggerContext({
+			params: { events: EVENTS },
+			staticData,
+			mode: 'manual',
+			request: request(raw, sign(raw, 'test')),
+		});
+		const result = await trigger.webhook.call(testRequest.context);
 		assert.deepEqual(result.workflowData, [[{ json: payload }]]);
 	});
 

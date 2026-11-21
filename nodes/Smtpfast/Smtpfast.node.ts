@@ -319,8 +319,11 @@ export class Smtpfast implements INodeType {
 					error.context.itemIndex = i;
 					throw new NodeOperationError(this.getNode(), error, { itemIndex: i });
 				}
-				if (error instanceof NodeApiError) error.context.itemIndex = i;
-				throw new NodeApiError(this.getNode(), error as JsonObject, { itemIndex: i });
+				if (error instanceof NodeApiError) {
+					error.context.itemIndex = i;
+					throw new NodeApiError(this.getNode(), error as unknown as JsonObject, { itemIndex: i });
+				}
+				throw new NodeOperationError(this.getNode(), error as Error, { itemIndex: i });
 			}
 		}
 

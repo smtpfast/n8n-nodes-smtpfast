@@ -45,11 +45,26 @@ const propertiesField: INodeProperties = {
 					placeholder: 'e.g. company',
 				},
 				{
+					displayName: 'Type',
+					name: 'type',
+					type: 'options',
+					options: [
+						{ name: 'Boolean', value: 'boolean', description: 'Send true or false' },
+						{ name: 'Empty', value: 'null', description: 'Send null to clear the property' },
+						{ name: 'Number', value: 'number', description: 'Send the value as a number' },
+						{ name: 'Text', value: 'string', description: 'Send the value as text' },
+					],
+					default: 'string',
+					description:
+						'The type to send the value as. Match the type the property has in SMTPfast.',
+				},
+				{
 					displayName: 'Value',
 					name: 'value',
 					type: 'string',
 					default: '',
 					placeholder: 'e.g. Acme',
+					displayOptions: { hide: { type: ['null'] } },
 				},
 			],
 		},
