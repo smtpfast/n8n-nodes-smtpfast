@@ -5,7 +5,7 @@ const { NodeApiError } = require('n8n-workflow');
 const NODE = {
 	id: 'node-1',
 	name: 'SMTPfast',
-	type: 'n8n-nodes-smtpfast.smtpfast',
+	type: '@smtpfast/n8n-nodes-smtpfast.smtpfast',
 	typeVersion: 1,
 	position: [0, 0],
 	parameters: {},
@@ -95,7 +95,7 @@ function createTriggerContext({
 		getNode: () => ({
 			...NODE,
 			name: 'SMTPfast Trigger',
-			type: 'n8n-nodes-smtpfast.smtpfastTrigger',
+			type: '@smtpfast/n8n-nodes-smtpfast.smtpfastTrigger',
 		}),
 		getNodeParameter(name, fallback) {
 			return name in params ? params[name] : fallback;

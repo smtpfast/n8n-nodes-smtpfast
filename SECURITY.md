@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Only the latest release of `n8n-nodes-smtpfast` gets security fixes.
+Only the latest release of `@smtpfast/n8n-nodes-smtpfast` gets security fixes.
 
 ## Report a vulnerability
 

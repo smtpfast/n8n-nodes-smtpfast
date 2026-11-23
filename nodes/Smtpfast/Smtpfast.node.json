@@ -1,5 +1,5 @@
 {
-	"node": "n8n-nodes-smtpfast.smtpfast",
+	"node": "@smtpfast/n8n-nodes-smtpfast.smtpfast",
 	"nodeVersion": "1.0",
 	"codexVersion": "1.0",
 	"categories": ["Communication", "Marketing & Content"],
