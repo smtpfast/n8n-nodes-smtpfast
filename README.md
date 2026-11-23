@@ -1,4 +1,4 @@
-# n8n-nodes-smtpfast
+# @smtpfast/n8n-nodes-smtpfast
 
 This is an n8n community node for [SMTPfast](https://smtpfa.st), an email API for developers. Use it to send email, manage contacts and segments, check sending domains, and start workflows from SMTPfast webhook events.
 
@@ -21,7 +21,7 @@ In short, on a self-hosted n8n:
 
 1. Go to **Settings > Community Nodes**.
 2. Select **Install**.
-3. Enter `n8n-nodes-smtpfast` and confirm.
+3. Enter `@smtpfast/n8n-nodes-smtpfast` and confirm.
 
 The package has no runtime dependencies.
 
@@ -153,7 +153,7 @@ To use it, copy the JSON, paste it into an n8n workflow, select your SMTPfast cr
     },
     {
       "name": "Send Email",
-      "type": "n8n-nodes-smtpfast.smtpfast",
+      "type": "@smtpfast/n8n-nodes-smtpfast.smtpfast",
       "typeVersion": 1,
       "position": [
         600,
@@ -203,7 +203,7 @@ To use it, copy the JSON, paste it into an n8n workflow, select your SMTPfast cr
     },
     {
       "name": "Get Email",
-      "type": "n8n-nodes-smtpfast.smtpfast",
+      "type": "@smtpfast/n8n-nodes-smtpfast.smtpfast",
       "typeVersion": 1,
       "position": [
         1000,

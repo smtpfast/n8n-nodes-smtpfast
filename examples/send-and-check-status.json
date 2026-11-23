@@ -40,7 +40,7 @@
     },
     {
       "name": "Send Email",
-      "type": "n8n-nodes-smtpfast.smtpfast",
+      "type": "@smtpfast/n8n-nodes-smtpfast.smtpfast",
       "typeVersion": 1,
       "position": [
         600,
@@ -90,7 +90,7 @@
     },
     {
       "name": "Get Email",
-      "type": "n8n-nodes-smtpfast.smtpfast",
+      "type": "@smtpfast/n8n-nodes-smtpfast.smtpfast",
       "typeVersion": 1,
       "position": [
         1000,
